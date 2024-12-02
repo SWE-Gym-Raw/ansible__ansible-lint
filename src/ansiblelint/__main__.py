@@ -34,8 +34,6 @@ from typing import TYPE_CHECKING, Any, TextIO
 
 from ansible_compat.prerun import get_cache_dir
 from filelock import BaseFileLock, FileLock, Timeout
-from rich.markdown import Markdown
-from rich.markup import escape
 
 from ansiblelint.constants import RC, SKIP_SCHEMA_UPDATE
 
@@ -61,7 +59,6 @@ from ansiblelint.config import (
 from ansiblelint.loaders import load_ignore_txt
 from ansiblelint.output import (
     console,
-    console_options,
     console_stderr,
     reconfigure,
     render_yaml,
@@ -86,7 +83,7 @@ class LintLogHandler(logging.Handler):
     def emit(self, record: logging.LogRecord) -> None:
         try:
             msg = self.format(record)
-            console_stderr.print(f"[dim]{msg}[/dim]", highlight=False)
+            console_stderr.print(f"[dim]{msg}[/]")
         except RecursionError:  # See issue 36272
             raise
         except Exception:  # pylint: disable=broad-exception-caught # noqa: BLE001
@@ -170,7 +167,6 @@ def _do_list(rules: RulesCollection) -> int:
     if options.list_rules:
         console.print(
             rules_as_str(rules),
-            highlight=False,
         )
         return 0
 
@@ -282,16 +278,15 @@ def main(argv: list[str] | None = None) -> int:
         argv = sys.argv
     cache_dir_lock = initialize_options(argv[1:])
 
-    console_options["force_terminal"] = options.colored
-    reconfigure(console_options)
+    reconfigure(colored=options.colored)
 
     if options.version:
         deps = get_deps_versions()
         msg = f"ansible-lint [repr.number]{__version__}[/] using[dim]"
         for k, v in deps.items():
-            msg += f" {escape(k)}:[repr.number]{v}[/]"
+            msg += f" {k}:[repr.number]{v}[/]"
         msg += "[/]"
-        console.print(msg, markup=True, highlight=False)
+        console.print(msg, markup=True)
         msg = get_version_warning()
         if msg:
             console.print(msg)
@@ -334,7 +329,7 @@ def main(argv: list[str] | None = None) -> int:
     if options.list_profiles:
         from ansiblelint.generate_docs import profiles_as_md
 
-        console.print(Markdown(profiles_as_md()))
+        profiles_as_md().display()
         return 0
 
     app = get_app(
